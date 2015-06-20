@@ -63,9 +63,9 @@ class OutputFormatter(object):
             if txt:
                 txt = HTMLParser().unescape(txt)
                 txt_lis = innerTrim(txt).split(r'\n')
-                txt_lis = [n.strip(' ') for n in txt_lis]
+                txt_lis = ['<p>' + re.sub(r'[^\x00-\x7F]+',' ', n.strip(' ')) + '</p>' for n in txt_lis] # make para tags on newlines
                 txts.extend(txt_lis)
-        return '\n\n'.join(txts)
+        return ''.join(txts)
 
     def convert_to_html(self):
         cleaned_node = self.parser.clean_article_html(self.get_top_node())

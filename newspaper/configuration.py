@@ -57,7 +57,7 @@ class Configuration(object):
         # Unique stopword classes for oriental languages, don't toggle
         self.stopwords_class = StopWords
 
-        self.browser_user_agent = 'newspaper/%s' % __version__
+        self.browser_user_agent = 'Mozilla/5.0 (compatible; Googlebot/2.1; http://www.google.com/bot.html)'
         self.request_timeout = 7
         self.number_threads = 10
 

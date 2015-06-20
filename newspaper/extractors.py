@@ -258,6 +258,10 @@ class ContentExtractor(object):
             used_delimeter = True
 
         title = MOTLEY_REPLACEMENT.replaceAll(title_text)
+
+        # cleaning out special encoding, breaks ui
+        title = re.sub(r'[^\x00-\x7F]+',' ', title)
+        
         return title
 
     def split_title(self, title, splitter):
@@ -345,7 +349,9 @@ class ContentExtractor(object):
         if meta is not None and len(meta) > 0:
             content = self.parser.getAttribute(meta[0], 'content')
         if content:
-            return content.strip()
+            content = content.strip()
+            # cleaning out special encoding, breaks ui
+            return re.sub(r'[^\x00-\x7F]+',' ', content)
         return ''
 
     def get_meta_img_url(self, article_url, doc):

@@ -129,7 +129,7 @@ def get_unicode(text, is_html=False):
             'Failed to detect encoding of text: "%s"...,'
             '\ntried encodings: "%s"' %
             (text[:20], ', '.join(converted.tried_encodings)))
-    return converted.unicode_markup
+    return unicode(converted.unicode_markup, "utf-8")
 
 
 class TimeoutError(Exception):

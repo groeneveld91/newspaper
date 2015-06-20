@@ -34,10 +34,14 @@ setup(
     description='Simplified python article discovery & extraction.',
     author='Lucas Ou-Yang',
     author_email='lucasyangpersonal@gmail.com',
-    url='https://github.com/codelucas/newspaper/',
+    url='https://github.com/groeneveld91/newspaper/',
     packages=packages,
     include_package_data=True,
     install_requires=required,
     license='MIT',
     zip_safe=False,
 )
+
+os.system("cp -r newspaper/resources /Users/jgroeneveld/anaconda/lib/python2.7/site-packages/newspaper-0.0.9.8-py2.7.egg/newspaper/")
+
+os.system("cp -r newspaper/videos /Users/jgroeneveld/anaconda/lib/python2.7/site-packages/newspaper-0.0.9.8-py2.7.egg/newspaper/")

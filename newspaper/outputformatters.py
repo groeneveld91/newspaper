@@ -64,7 +64,7 @@ class OutputFormatter(object):
             if txt:
                 txt = HTMLParser().unescape(txt)
                 txt_lis = innerTrim(txt).split(r'\n')
-                txt_lis = ['<p>' + re.sub(r'[^\x00-\x7F]+',' ', n.strip(' ')) + '</p>' for n in txt_lis] # make para tags on newlines
+                txt_lis = [u'<p>' + unicode(re.sub(r'[^\x00-\x7F]+',' ', n.strip(' ')), "utf-8") + u'</p>' for n in txt_lis] # make para tags on newlines
                 txts.extend(txt_lis)
         return ''.join(txts)
 

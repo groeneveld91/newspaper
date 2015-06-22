@@ -29,6 +29,20 @@ def get_request_kwargs(timeout, useragent):
         'allow_redirects': True
     }
 
+def get_json(_id, config=None, response=None):
+    useragent = config.browser_user_agent
+    timeout = config.request_timeout
+    url = config.youtube_api_endpoint + config.youtube_api_key + config.youtube_api_snippet + str(_id)
+
+    try:
+        json = None
+        response = requests.get(url=url, 
+            **get_request_kwargs(timeout, useragent))
+        json = response.json() if response.json() is not None else u''
+        return json
+    except Exception, e:
+        log.debug('%s on %s' % (e, url))
+        return u''
 
 def get_html(url, config=None, response=None):
     """Retrieves the html for either a url or a response object. All html

@@ -8,6 +8,7 @@ import logging
 import copy
 import os
 import glob
+import re
 
 from . import images
 from . import network
@@ -16,11 +17,11 @@ from . import settings
 from . import urls
 
 from .cleaners import DocumentCleaner
-from .configuration import Configuration
+from .configuration import Configuration, YoutubeConfiguration
 from .extractors import ContentExtractor
 from .outputformatters import OutputFormatter
 from .utils import (URLHelper, RawHelper, extend_config,
-                    get_available_languages, get_unicode)
+                    get_available_languages, get_unicode, wrap_text_in_ptags)
 from .videos.extractors import VideoExtractor
 
 log = logging.getLogger(__name__)
@@ -39,6 +40,7 @@ class Article(object):
         """
         self.config = config or Configuration()
         self.config = extend_config(self.config, kwargs)
+        self.youtube_config = YoutubeConfiguration()
 
         self.extractor = ContentExtractor(self.config)
 
@@ -55,6 +57,9 @@ class Article(object):
         self.url = urls.prepare_url(url, self.source_url)
 
         self.title = get_unicode(title)
+
+        # The embed url if url is youtube or vimeo
+        self.video_url = u''
 
         # URL of the "best image" to represent this article
         self.top_img = self.top_image = u''
@@ -99,6 +104,9 @@ class Article(object):
         self.is_parsed = False
         self.is_downloaded = False
 
+        # Site_name from meta_data
+        self.site_name = u""
+
         # Meta description field in the HTML source
         self.meta_description = u""
 
@@ -126,6 +134,12 @@ class Article(object):
         # lxml DOM object generated from HTML
         self.doc = None
 
+        # json object for json data
+        self.json = None
+
+        # global description
+        self.description = u''
+
         # A deepcopied clone of the above object before undergoing heavy
         # cleaning operations, serves as an API if users need to query the DOM
         self.clean_doc = None
@@ -142,93 +156,124 @@ class Article(object):
         self.parse()
         self.nlp()
 
-    def download(self, html=None):
+    def download(self, html=None, json=None):
         """Downloads the link's HTML content, don't use if you are batch async
         downloading articles
         """
         if html is None:
-            html = network.get_html(self.url, self.config)
+            if self.is_video():
+                if self.is_youtube():
+                    print 'Hitting Youtube API'
+                    json = network.get_json(self.get_video_id(), self.youtube_config)
+                if self.is_vimeo():
+                    pass #TODO
+            else:
+                print 'Downloading html'
+                html = network.get_html(self.url, self.config)
         self.set_html(html)
+        self.set_json(json)
 
     def parse(self):
         if not self.is_downloaded:
             print 'You must download() an article before parsing it!'
             raise ArticleException()
 
-        self.doc = self.config.get_parser().fromstring(self.html)
-        self.clean_doc = copy.deepcopy(self.doc)
+        if self.is_video() and self.json:
+            print 'Parsing video json.'
+            title = self.extractor.get_title(self.json, is_json=True)
+            self.set_title(title)
 
-        if self.doc is None:
-            # `parse` call failed, return nothing
-            return
+            self.publish_date = self.extractor.get_publishing_date(self.url, self.json, is_json=True)
 
-        # TODO: Fix this, sync in our fix_url() method
-        parse_candidate = self.get_parse_candidate()
-        self.link_hash = parse_candidate.link_hash  # MD5
+            description = self.extractor.get_json_description(self.json)
+            self.set_description(description)
+            self.top_image = self.extractor.get_json_top_image(self.json)
+            self.video_url = self.get_video_url()
+            self.site_name = self.extractor.get_site_name(self.url)
+            self.is_parsed = True
 
-        document_cleaner = DocumentCleaner(self.config)
-        output_formatter = OutputFormatter(self.config)
+        else:
+            print 'Parsing html.'
+            self.doc = self.config.get_parser().fromstring(self.html)
+            self.clean_doc = copy.deepcopy(self.doc)
 
-        title = self.extractor.get_title(self.clean_doc)
-        self.set_title(title)
+            if self.doc is None:
+                # `parse` call failed, return nothing
+                return
 
-        authors = self.extractor.get_authors(self.clean_doc)
-        self.set_authors(authors)
+            # TODO: Fix this, sync in our fix_url() method
+            parse_candidate = self.get_parse_candidate()
+            self.link_hash = parse_candidate.link_hash  # MD5
 
-        meta_lang = self.extractor.get_meta_lang(self.clean_doc)
-        self.set_meta_language(meta_lang)
+            document_cleaner = DocumentCleaner(self.config)
+            output_formatter = OutputFormatter(self.config)
 
-        if self.config.use_meta_language:
-            self.extractor.update_language(self.meta_lang)
-            output_formatter.update_language(self.meta_lang)
+            title = self.extractor.get_title(self.clean_doc)
+            self.set_title(title)
 
-        meta_favicon = self.extractor.get_favicon(self.clean_doc)
-        self.set_meta_favicon(meta_favicon)
+            authors = self.extractor.get_authors(self.clean_doc)
+            self.set_authors(authors)
 
-        meta_description = \
-            self.extractor.get_meta_description(self.clean_doc)
-        self.set_meta_description(meta_description)
+            meta_lang = self.extractor.get_meta_lang(self.clean_doc)
+            self.set_meta_language(meta_lang)
 
-        canonical_link = self.extractor.get_canonical_link(
-            self.url, self.clean_doc)
-        self.set_canonical_link(canonical_link)
+            if self.config.use_meta_language:
+                self.extractor.update_language(self.meta_lang)
+                output_formatter.update_language(self.meta_lang)
 
-        tags = self.extractor.extract_tags(self.clean_doc)
-        self.set_tags(tags)
+            meta_favicon = self.extractor.get_favicon(self.clean_doc)
+            self.set_meta_favicon(meta_favicon)
 
-        meta_keywords = self.extractor.get_meta_keywords(
-            self.clean_doc)
-        self.set_meta_keywords(meta_keywords)
+            meta_description = \
+                self.extractor.get_meta_description(self.clean_doc)
+            self.set_meta_description(meta_description)
+            self.set_description(meta_description)
 
-        meta_data = self.extractor.get_meta_data(self.clean_doc)
-        self.set_meta_data(meta_data)
+            canonical_link = self.extractor.get_canonical_link(
+                self.url, self.clean_doc)
+            self.set_canonical_link(canonical_link)
 
-        self.publish_date = self.extractor.get_publishing_date(
-            self.url,
-            self.clean_doc)
+            tags = self.extractor.extract_tags(self.clean_doc)
+            self.set_tags(tags)
 
-        # Before any computations on the body, clean DOM object
-        self.doc = document_cleaner.clean(self.doc)
+            meta_keywords = self.extractor.get_meta_keywords(
+                self.clean_doc)
+            self.set_meta_keywords(meta_keywords)
 
-        text = u''
-        self.top_node = self.extractor.calculate_best_node(self.doc)
-        if self.top_node is not None:
-            video_extractor = VideoExtractor(self.config, self.top_node)
-            self.set_movies(video_extractor.get_videos())
+            meta_data = self.extractor.get_meta_data(self.clean_doc)
+            self.set_meta_data(meta_data)
 
-            self.top_node = self.extractor.post_cleanup(self.top_node)
-            self.clean_top_node = copy.deepcopy(self.top_node)
+            self.site_name =  self.extractor.get_site_name(self.url)
 
-            text, article_html = output_formatter.get_formatted(
-                self.top_node)
-            self.set_article_html(article_html)
-            self.set_text(text)
+            self.publish_date = self.extractor.get_publishing_date(
+                self.url,
+                self.clean_doc)
 
-        if self.config.fetch_images:
-            self.fetch_images()
+            # Before any computations on the body, clean DOM object
+            self.doc = document_cleaner.clean(self.doc)
 
-        self.is_parsed = True
-        self.release_resources()
+            text = u''
+            self.top_node = self.extractor.calculate_best_node(self.doc)
+            if self.top_node is not None:
+                video_extractor = VideoExtractor(self.config, self.top_node)
+                self.set_movies(video_extractor.get_videos())
+
+                self.top_node = self.extractor.post_cleanup(self.top_node)
+                self.clean_top_node = copy.deepcopy(self.top_node)
+
+                text, article_html = output_formatter.get_formatted(
+                    self.top_node)
+                self.set_article_html(article_html)
+                self.set_text(text)
+
+            if self.config.fetch_images:
+                self.fetch_images()
+
+            # Make use of self.set_movies
+            self.video_url = self.get_video_url()
+
+            self.is_parsed = True
+            self.release_resources()
 
     def fetch_images(self):
         if self.clean_doc is not None:
@@ -258,6 +303,28 @@ class Article(object):
         """
         return urls.valid_url(self.url)
 
+    def is_video(self):
+        return self.is_youtube() or self.is_vimeo()
+
+    def is_youtube(self):
+
+        """Checks if url is youtube 
+        """
+        return 'youtube' in self.url or 'youtu.be' in self.url
+
+    def successful(self):
+        """Extend this to check if video was successful
+        """
+        return not self.is_video() and not self.is_valid_body()
+
+    def is_vimeo(self):
+        """Check if url is vimeo
+        """
+        return 'vimeo.com' in self.url
+
+    def has_video(self):
+        return len(self.movies) > 0 or self.is_video()
+
     def is_valid_body(self):
         """If the article's body text is long enough to meet
         standard article requirements, keep the article
@@ -265,6 +332,9 @@ class Article(object):
         if not self.is_parsed:
             raise ArticleException('must parse article before checking \
                                     if it\'s body is valid!')
+        if self.is_video():
+            return True
+
         meta_type = self.extractor.get_meta_type(self.clean_doc)
         wordcount = self.text.split(' ')
         sentcount = self.text.split('.')
@@ -323,6 +393,36 @@ class Article(object):
         summary = '\n'.join(summary_sents)
         self.set_summary(summary)
 
+    def get_video_id(self):
+        """Video id for youtube or vimeo
+        """
+        if self.is_youtube():        
+            youtube_regex = (
+            r'(https?://)?(www\.)?'
+            '(youtube|youtu|youtube-nocookie)\.(com|be)/'
+            '(watch\?v=|embed/|v/|.+\?v=)?([^&=%\?]{11})')
+
+            response = re.match(youtube_regex, self.url)
+            if response:
+                return response.group(6)
+
+        elif self.is_vimeo():
+            response = re.search(r'^(http://)?(www\.)?(vimeo\.com/)?(\d+)', self.url)
+            if response:
+                return response.group(4)
+        return ''
+
+    def get_video_url(self):
+        path = u''
+        if self.is_youtube():
+            return u'https://www.youtube.com/embed/' + self.get_video_id()
+        if self.is_vimeo():
+            #TODO: vimeo embed video url
+            return u'' + self.get_video_id()
+        if hasattr(self, 'movies') and len(self.movies) > 0:
+            path = self.movies[0]
+        return path
+
     def get_parse_candidate(self):
         """A parse candidate is a wrapper object holding a link hash of this
         article and a final_url of the article
@@ -377,6 +477,9 @@ class Article(object):
         title = title[:self.config.MAX_TITLE]
         self.title = get_unicode(title)
 
+    def set_description(self, description):
+        self.description = wrap_text_in_ptags(description)
+
     def set_text(self, text):
         text = text[:self.config.MAX_TEXT]
         self.text = get_unicode(text)
@@ -386,6 +489,12 @@ class Article(object):
         """
         self.is_downloaded = True
         self.html = get_unicode(html, is_html=True)
+
+    def set_json(self, json):
+        """Set it
+        """
+        self.is_downloaded = True
+        self.json = json
 
     def set_article_html(self, article_html):
         """Sets the HTML of just the article's `top_node`

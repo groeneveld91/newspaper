@@ -9,8 +9,7 @@ __copyright__ = 'Copyright 2014, Lucas Ou-Yang'
 
 from HTMLParser import HTMLParser
 import re
-from .text import innerTrim
-
+from .utils import wrap_text_in_ptags
 
 class OutputFormatter(object):
 
@@ -63,8 +62,7 @@ class OutputFormatter(object):
             txt = self.parser.getText(node)
             if txt:
                 txt = HTMLParser().unescape(txt)
-                txt_lis = innerTrim(txt).split(r'\n')
-                txt_lis = [u'<p>' + unicode(re.sub(r'[^\x00-\x7F]+',' ', n.strip(' ')), "utf-8") + u'</p>' for n in txt_lis] # make para tags on newlines
+                txt_lis = [wrap_text_in_ptags(txt)]
                 txts.extend(txt_lis)
         return ''.join(txts)
 

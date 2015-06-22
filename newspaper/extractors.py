@@ -163,15 +163,26 @@ class ContentExtractor(object):
         #    return [] # Failed to find anything
         # return authors
 
-    def get_publishing_date(self, url, doc):
+    def get_publishing_date(self, url, doc, is_json=False):
         """3 strategies for publishing date extraction. The strategies
         are descending in accuracy and the next strategy is only
         attempted if a preferred one fails.
 
+        0. Date from json
         1. Pubdate from URL
         2. Pubdate from metadata
         3. Raw regex searches in the HTML + added heuristics
         """
+
+        if is_json:
+            json = doc
+
+            json = self.get_relevant_json(json)
+
+            if 'publishedAt' in json:
+                return json['publishedAt']
+
+
 
         def parse_date_str(date_str):
             try:
@@ -215,15 +226,23 @@ class ContentExtractor(object):
 
         return None
 
-    def get_title(self, doc):
+    def get_title(self, doc, is_json=False):
         """Fetch the article title and analyze it
         """
+        if is_json:
+            json = doc
+
+            json = self.get_relevant_json(json)
+            
+            if 'title' in json:
+                return json['title']
+            return 
+
         title = ''
         title_element = self.parser.getElementsByTag(doc, tag='title')
         # no title found
         if title_element is None or len(title_element) == 0:
             return title
-
         # title elem found
         title_text = self.parser.getText(title_element[0])
         used_delimeter = False
@@ -258,9 +277,6 @@ class ContentExtractor(object):
             used_delimeter = True
 
         title = MOTLEY_REPLACEMENT.replaceAll(title_text)
-
-        # cleaning out special encoding, breaks ui
-        title = re.sub(r'[^\x00-\x7F]+',' ', title)
         
         return title
 
@@ -311,6 +327,49 @@ class ContentExtractor(object):
             favicon = self.parser.getAttribute(meta[0], 'href')
             return favicon
         return ''
+
+    def get_relevant_json(self, json):
+        # Youtube video
+        if 'items' in json:
+            json = json['items'][0]
+        if 'snippet' in json:
+            json = json['snippet']
+
+        return json
+
+    def get_json_description(self, json):
+        """Extract description from json
+        """
+        json = self.get_relevant_json(json)
+
+        # Youtube API
+        if 'description' in json:
+            return json['description']
+        print 'No description found.'
+        return # None if not found
+
+    def get_json_top_image(self, json):
+        json = self.get_relevant_json(json)
+
+        # Youtube API
+        if 'thumbnails' in json:
+            json = json['thumbnails']
+        
+        if 'high' in json:
+            json = json['high']
+
+        if 'url' in json:
+            return json['url']
+        
+        print 'No image url found in json object for Youtube video.'
+
+        # Vimeo API
+
+        return
+
+    def get_site_name(self, url):
+        o = urlparse.urlparse(url)
+        return o.netloc
 
     def get_meta_lang(self, doc):
         """Extract content language from meta

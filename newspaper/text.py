@@ -13,14 +13,13 @@ import string
 
 from .utils import FileHelper
 
-TABSSPACE = re.compile(r'[\s\t]+', flags=re.UNICODE)
+TABSSPACE = re.compile(r'[\t]+', flags=re.UNICODE)
 
 
 def innerTrim(value):
     if isinstance(value, (unicode, str)):
         # remove tab and white space
         value = re.sub(TABSSPACE, ' ', value)
-        value = ''.join(value.splitlines())
         return value.strip()
     return ''
 

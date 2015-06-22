@@ -129,8 +129,19 @@ def get_unicode(text, is_html=False):
             'Failed to detect encoding of text: "%s"...,'
             '\ntried encodings: "%s"' %
             (text[:20], ', '.join(converted.tried_encodings)))
-    return unicode(converted.unicode_markup, "utf-8")
+    return converted.unicode_markup
 
+def wrap_text_in_ptags(text):
+    from .text import innerTrim
+    NEWLINE = re.compile(r'[\n\x0B\f]+', flags=re.UNICODE)
+    txt_lis = re.split(NEWLINE, innerTrim(text)) #re.sub(r'[^\x00-\x7F]+',' ', n.strip(' '))
+
+    txt_lis = [u'<p>' + n.strip(' ') + u'</p>' for n in txt_lis] # make para tags on newlines
+    text =  ''.join(txt_lis)
+
+    text = text.replace('\\n', '')
+
+    return text
 
 class TimeoutError(Exception):
     pass

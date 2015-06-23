@@ -9,6 +9,9 @@ import copy
 import os
 import glob
 import re
+import subprocess
+from lxml import html
+
 
 from . import images
 from . import network
@@ -17,7 +20,7 @@ from . import settings
 from . import urls
 
 from .cleaners import DocumentCleaner
-from .configuration import Configuration, YoutubeConfiguration
+from .configuration import Configuration, VideoConfiguration
 from .extractors import ContentExtractor
 from .outputformatters import OutputFormatter
 from .utils import (URLHelper, RawHelper, extend_config,
@@ -40,7 +43,7 @@ class Article(object):
         """
         self.config = config or Configuration()
         self.config = extend_config(self.config, kwargs)
-        self.youtube_config = YoutubeConfiguration()
+        self.video_config = VideoConfiguration()
 
         self.extractor = ContentExtractor(self.config)
 
@@ -103,6 +106,7 @@ class Article(object):
         # or if they call methods out of order
         self.is_parsed = False
         self.is_downloaded = False
+        self.is_redownloaded = False
 
         # Site_name from meta_data
         self.site_name = u""
@@ -160,18 +164,27 @@ class Article(object):
         """Downloads the link's HTML content, don't use if you are batch async
         downloading articles
         """
+
         if html is None:
             if self.is_video():
                 if self.is_youtube():
-                    print 'Hitting Youtube API'
-                    json = network.get_json(self.get_video_id(), self.youtube_config)
+                    print 'Hitting Youtube API...'
+                    json = network.get_youtube_json(self.get_video_id(), self.video_config)
                 if self.is_vimeo():
-                    pass #TODO
+                    print 'Hitting Vimeo API...'
+                    json = network.get_vimeo_json(self.url, self.video_config)
             else:
-                print 'Downloading html'
+                print 'Using newspaper...'
                 html = network.get_html(self.url, self.config)
         self.set_html(html)
         self.set_json(json)
+
+    def phantom_download(self):
+        print 'Trying phantomjs download...' # TODO change path for phantom
+        html = subprocess.check_output("/usr/local/bin/phantomjs /Users/jgroeneveld/slyp/download.js " + self.url, shell=True)
+        self.set_html(html)
+        self.is_redownloaded = True
+        # self.parse()
 
     def parse(self):
         if not self.is_downloaded:
@@ -180,11 +193,11 @@ class Article(object):
 
         if self.is_video() and self.json:
             print 'Parsing video json.'
-            title = self.extractor.get_title(self.json, is_json=True)
+            title = self.extractor.get_json_title(self.json)
             self.set_title(title)
 
-            self.publish_date = self.extractor.get_publishing_date(self.url, self.json, is_json=True)
-
+            self.publish_date = self.extractor.get_json_publishing_date(self.json)
+            self.authors = self.extractor.get_json_author(self.json)
             description = self.extractor.get_json_description(self.json)
             self.set_description(description)
             self.top_image = self.extractor.get_json_top_image(self.json)
@@ -193,12 +206,12 @@ class Article(object):
             self.is_parsed = True
 
         else:
-            print 'Parsing html.'
+            print 'Parsing...'
             self.doc = self.config.get_parser().fromstring(self.html)
             self.clean_doc = copy.deepcopy(self.doc)
 
             if self.doc is None:
-                # `parse` call failed, return nothing
+                print '`parse` call failed, return nothing'
                 return
 
             # TODO: Fix this, sync in our fix_url() method
@@ -260,7 +273,6 @@ class Article(object):
 
                 self.top_node = self.extractor.post_cleanup(self.top_node)
                 self.clean_top_node = copy.deepcopy(self.top_node)
-
                 text, article_html = output_formatter.get_formatted(
                     self.top_node)
                 self.set_article_html(article_html)
@@ -312,10 +324,10 @@ class Article(object):
         """
         return 'youtube' in self.url or 'youtu.be' in self.url
 
-    def successful(self):
+    def is_successful(self):
         """Extend this to check if video was successful
         """
-        return not self.is_video() and not self.is_valid_body()
+        return not (not self.title or not self.description)
 
     def is_vimeo(self):
         """Check if url is vimeo
@@ -417,8 +429,9 @@ class Article(object):
         if self.is_youtube():
             return u'https://www.youtube.com/embed/' + self.get_video_id()
         if self.is_vimeo():
-            #TODO: vimeo embed video url
-            return u'' + self.get_video_id()
+            ht_ml = self.json['html'] if 'html' in self.json else u''
+            e = html.fromstring(ht_ml)
+            return e.get('src')
         if hasattr(self, 'movies') and len(self.movies) > 0:
             path = self.movies[0]
         return path

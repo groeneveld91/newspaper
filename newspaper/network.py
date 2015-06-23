@@ -10,10 +10,11 @@ __copyright__ = 'Copyright 2014, Lucas Ou-Yang'
 
 import logging
 import requests
-
+from urllib import quote
 from .configuration import Configuration
 from .mthreading import ThreadPool
 from .settings import cj
+from .version import __version__
 
 log = logging.getLogger(__name__)
 
@@ -23,13 +24,13 @@ def get_request_kwargs(timeout, useragent):
     are methods which need to be called every time we make a request
     """
     return {
-        'headers': {'User-Agent': useragent},
+        'headers': {'User-Agent': useragent, 'Referer': 'https://www.google.com' },
         'cookies': cj(),
         'timeout': timeout,
         'allow_redirects': True
     }
 
-def get_json(_id, config=None, response=None):
+def get_youtube_json(_id, config=None, response=None):
     useragent = config.browser_user_agent
     timeout = config.request_timeout
     url = config.youtube_api_endpoint + config.youtube_api_key + config.youtube_api_snippet + str(_id)
@@ -41,6 +42,23 @@ def get_json(_id, config=None, response=None):
         json = response.json() if response.json() is not None else u''
         return json
     except Exception, e:
+        log.debug('%s on %s' % (e, url))
+        return u''
+
+def get_vimeo_json(url, config=None):
+    timeout = config.request_timeout
+    useragent = 'newspaper' + __version__
+    # Encode url as per Vimeo requirement --  RFC 1738
+    url = config.vimeo_schema + quote(url)
+    try:
+        json = None
+        print 'Request URL:', url
+        response = requests.get(url=url, 
+            **get_request_kwargs(timeout, useragent))
+        print 'Response:',response
+        return response.json() if response.json() is not None else u''
+    except Exception, e:
+        print 'Error: %s on %s' % (e,url)
         log.debug('%s on %s' % (e, url))
         return u''
 

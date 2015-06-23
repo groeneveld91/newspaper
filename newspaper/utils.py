@@ -135,12 +135,10 @@ def wrap_text_in_ptags(text):
     from .text import innerTrim
     NEWLINE = re.compile(r'[\n\x0B\f]+', flags=re.UNICODE)
     txt_lis = re.split(NEWLINE, innerTrim(text)) #re.sub(r'[^\x00-\x7F]+',' ', n.strip(' '))
-
     txt_lis = [u'<p>' + n.strip(' ') + u'</p>' for n in txt_lis] # make para tags on newlines
-    text =  ''.join(txt_lis)
+    text = ''.join(txt_lis)
 
     text = text.replace('\\n', '')
-
     return text
 
 class TimeoutError(Exception):

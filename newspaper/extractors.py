@@ -163,27 +163,29 @@ class ContentExtractor(object):
         #    return [] # Failed to find anything
         # return authors
 
+    def get_json_publishing_date(self, json):
+        json = self.get_relevant_json(json)
+
+        if 'publishedAt' in json:
+            return json['publishedAt']
+
+        return u''
+
+    def get_json_author(self, json):
+        json = self.get_relevant_json(json)
+        if 'author_name' in json:
+            return json['author_name']
+        return u''
+
     def get_publishing_date(self, url, doc, is_json=False):
         """3 strategies for publishing date extraction. The strategies
         are descending in accuracy and the next strategy is only
         attempted if a preferred one fails.
 
-        0. Date from json
         1. Pubdate from URL
         2. Pubdate from metadata
         3. Raw regex searches in the HTML + added heuristics
         """
-
-        if is_json:
-            json = doc
-
-            json = self.get_relevant_json(json)
-
-            if 'publishedAt' in json:
-                return json['publishedAt']
-
-
-
         def parse_date_str(date_str):
             try:
                 datetime_obj = date_parser(date_str)
@@ -226,18 +228,18 @@ class ContentExtractor(object):
 
         return None
 
-    def get_title(self, doc, is_json=False):
+    def get_json_title(self, json):
+        json = self.get_relevant_json(json)
+        
+        # Youtube, Vimeo API
+        if 'title' in json:
+            return json['title']
+        return u''
+
+
+    def get_title(self, doc):
         """Fetch the article title and analyze it
         """
-        if is_json:
-            json = doc
-
-            json = self.get_relevant_json(json)
-            
-            if 'title' in json:
-                return json['title']
-            return 
-
         title = ''
         title_element = self.parser.getElementsByTag(doc, tag='title')
         # no title found
@@ -332,9 +334,10 @@ class ContentExtractor(object):
         # Youtube video
         if 'items' in json:
             json = json['items'][0]
-        if 'snippet' in json:
-            json = json['snippet']
+            if 'snippet' in json and 'title' in json['snippet']:
+                return json['snippet']
 
+        # Vimeo response is flat, no nests so no parsing needed 
         return json
 
     def get_json_description(self, json):
@@ -342,11 +345,11 @@ class ContentExtractor(object):
         """
         json = self.get_relevant_json(json)
 
-        # Youtube API
+        # Youtube, Vimeo API
         if 'description' in json:
             return json['description']
         print 'No description found.'
-        return # None if not found
+        return u'' # None if not found
 
     def get_json_top_image(self, json):
         json = self.get_relevant_json(json)
@@ -354,18 +357,17 @@ class ContentExtractor(object):
         # Youtube API
         if 'thumbnails' in json:
             json = json['thumbnails']
-        
-        if 'high' in json:
-            json = json['high']
-
-        if 'url' in json:
-            return json['url']
-        
-        print 'No image url found in json object for Youtube video.'
+            if 'high' in json:
+                json = json['high']
+                if 'url' in json:
+                    return json['url']
 
         # Vimeo API
-
-        return
+        if 'thumbnail_url' in json:
+            return json['thumbnail_url']
+        
+        print 'No image url found in json object for Youtube video.'
+        return u''
 
     def get_site_name(self, url):
         o = urlparse.urlparse(url)
@@ -719,7 +721,6 @@ class ContentExtractor(object):
         i = 0
         parent_nodes = []
         nodes_with_text = []
-
         for node in nodes_to_check:
             text_node = self.parser.getText(node)
             word_stats = self.stopwords_class(language=self.language).\

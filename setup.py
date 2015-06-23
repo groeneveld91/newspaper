@@ -7,6 +7,7 @@ python setup.py sdist bdist_wininst upload
 """
 import sys
 import os
+import site
 
 try:
     from setuptools import setup
@@ -42,6 +43,11 @@ setup(
     zip_safe=False,
 )
 
-os.system("cp -r newspaper/resources /Users/jgroeneveld/anaconda/lib/python2.7/site-packages/newspaper-0.0.9.8-py2.7.egg/newspaper/")
+os.system("cp -r ./newspaper/resources " + site.getsitepackages()[0] + "/newspaper-0.0.9.8-py2.7.egg/newspaper/")
 
-os.system("cp -r newspaper/videos /Users/jgroeneveld/anaconda/lib/python2.7/site-packages/newspaper-0.0.9.8-py2.7.egg/newspaper/")
+os.system("cp -r ./newspaper/videos " + site.getsitepackages()[0] + "/newspaper-0.0.9.8-py2.7.egg/newspaper/")
+
+
+
+
+

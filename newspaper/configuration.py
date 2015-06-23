@@ -57,7 +57,7 @@ class Configuration(object):
         # Unique stopword classes for oriental languages, don't toggle
         self.stopwords_class = StopWords
 
-        self.browser_user_agent = 'newspaper', __version__
+        self.browser_user_agent = 'newspaper', __version__ # Mozilla/5.0 (compatible; Googlebot/2.1; http://www.google.com/bot.html)
         self.request_timeout = 7
         self.number_threads = 10
 
@@ -105,13 +105,14 @@ class Configuration(object):
         return Parser
 
 
-class YoutubeConfiguration(Configuration):
+class VideoConfiguration(Configuration):
     def __init__(self):
-        super(YoutubeConfiguration, self).__init__()
+        super(VideoConfiguration, self).__init__()
         self.youtube_api_endpoint = "https://www.googleapis.com/youtube/v3/videos?key="
         self.youtube_api_key = "AIzaSyDbGRQm1U4UMerLbtYuyWoA50sO1S3eSXg"
         self.youtube_api_snippet = "&part=snippet&id="
-
+        self.vimeo_schema = "https://vimeo.com/api/oembed.json?url="
+        self.vimeo_api_key = 'TODO' # when extending vimeo support functionality
         
 
 class ArticleConfiguration(Configuration):

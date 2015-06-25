@@ -8,7 +8,8 @@ python setup.py sdist bdist_wininst upload
 import sys
 import os
 import site
-
+from distutils.sysconfig import get_python_lib
+ 
 try:
     from setuptools import setup
 except ImportError:
@@ -43,9 +44,9 @@ setup(
     zip_safe=False,
 )
 
-os.system("cp -r ./newspaper/resources " + site.getsitepackages()[0] + "/newspaper-0.0.9.8-py2.7.egg/newspaper/")
+os.system("cp -r ./newspaper/resources " + get_python_lib() + "/newspaper-0.0.9.8-py2.7.egg/newspaper/")
 
-os.system("cp -r ./newspaper/videos " + site.getsitepackages()[0] + "/newspaper-0.0.9.8-py2.7.egg/newspaper/")
+os.system("cp -r ./newspaper/videos " + get_python_lib()  + "/newspaper-0.0.9.8-py2.7.egg/newspaper/")
 
 
 

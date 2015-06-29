@@ -181,7 +181,7 @@ class Article(object):
 
     def phantom_download(self):
         print 'Trying phantomjs download...' # TODO change path for phantom
-        html = subprocess.check_output("/usr/local/bin/phantomjs /Users/jgroeneveld/slyp/download.js " + self.url, shell=True)
+        html = subprocess.check_output("/usr/local/bin/phantomjs /Users/jgroeneveld/slyp/download.js \"" + self.url + "\"", shell=True)
         self.set_html(html)
         self.is_redownloaded = True
         # self.parse()
@@ -286,6 +286,11 @@ class Article(object):
 
             self.is_parsed = True
             self.release_resources()
+
+        if not self.is_successful() and not self.is_redownloaded:
+            self.phantom_download()
+            self.parse()
+
 
     def fetch_images(self):
         if self.clean_doc is not None:

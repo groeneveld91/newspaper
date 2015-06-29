@@ -229,7 +229,9 @@ package name is ``newspaper``.
 
 - Install the distribution via pip::
 
-    $ pip install newspaper
+    $ git clone https://github.com/groeneveld91/newspaper.git
+    $ cd newspaper
+    $ python setup.py install
 
 - Download NLP related corpora::
 
@@ -244,7 +246,9 @@ package name is ``newspaper``.
 
     $ brew install libtiff libjpeg webp little-cms2
 
-    $ pip install newspaper
+    $ git clone https://github.com/groeneveld91/newspaper.git
+    $ cd newspaper
+    $ python setup.py install
 
     $ curl https://raw.githubusercontent.com/codelucas/newspaper/master/download_corpora.py | python
 

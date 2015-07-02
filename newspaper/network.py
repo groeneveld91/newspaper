@@ -24,7 +24,7 @@ def get_request_kwargs(timeout, useragent):
     are methods which need to be called every time we make a request
     """
     return {
-        'headers': {'User-Agent': useragent, 'Referer': 'https://www.google.com' },
+        'headers': {'User-Agent': useragent, 'Referer': 'http://t.co' },
         'cookies': cj(),
         'timeout': timeout,
         'allow_redirects': True

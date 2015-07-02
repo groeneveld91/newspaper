@@ -332,7 +332,7 @@ class Article(object):
     def is_successful(self):
         """Extend this to check if video was successful
         """
-        return not (not self.title or not self.description)
+        return (not self.title or (not self.description or not self.summary))
 
     def is_vimeo(self):
         """Check if url is vimeo

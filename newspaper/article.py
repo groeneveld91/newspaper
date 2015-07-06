@@ -90,6 +90,8 @@ class Article(object):
 
         # List of authors who have published the article, via parse()
         self.authors = []
+        # First element in authors if authors is not empty
+        self.author = u''
 
         self.publish_date = u''
 
@@ -197,7 +199,7 @@ class Article(object):
             self.set_title(title)
 
             self.publish_date = self.extractor.get_json_publishing_date(self.json)
-            self.authors = self.extractor.get_json_author(self.json)
+            self.author = self.extractor.get_json_author(self.json)
             description = self.extractor.get_json_description(self.json)
             self.set_description(description)
             self.top_image = self.extractor.get_json_top_image(self.json)
@@ -562,6 +564,7 @@ class Article(object):
         if authors:
             authors = authors[:self.config.MAX_AUTHORS]
             self.authors = [get_unicode(author) for author in authors]
+            self.author = self.authors[0]
 
     def set_summary(self, summary):
         """Summary here refers to a paragraph of text from the

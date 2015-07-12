@@ -183,7 +183,7 @@ class Article(object):
 
     def phantom_download(self):
         print 'Trying phantomjs download...' # TODO change path for phantom
-        html = subprocess.check_output("/usr/local/bin/phantomjs /Users/jgroeneveld/slyp/download.js \"" + self.url + "\"", shell=True)
+        html = subprocess.check_output("phantomjs /Users/jgroeneveld/slyp/download.js \"" + self.url + "\"", shell=True)
         self.set_html(html)
         self.is_redownloaded = True
         # self.parse()
@@ -329,7 +329,7 @@ class Article(object):
 
         """Checks if url is youtube 
         """
-        return 'youtube' in self.url or 'youtu.be' in self.url
+        return 'youtube.' in self.url or 'youtu.be' in self.url
 
     def is_successful(self):
         """Extend this to check if video was successful

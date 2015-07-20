@@ -182,11 +182,16 @@ class Article(object):
         self.set_json(json)
 
     def phantom_download(self):
+        '''
+        called from regular parse method, if not is_successful
+        '''
         print 'Trying phantomjs download...' # TODO change path for phantom
-        html = subprocess.check_output("phantomjs /Users/jgroeneveld/slyp/download.js \"" + self.url + "\"", shell=True)
-        self.set_html(html)
+        try:
+            html = subprocess.check_output("phantomjs /usr/local/bin/download.js \"" + self.url + "\"", shell=True)
+            self.set_html(html)
+        except Exception as e:
+            print e
         self.is_redownloaded = True
-        # self.parse()
 
     def parse(self):
         if not self.is_downloaded:
@@ -291,6 +296,7 @@ class Article(object):
 
         if not self.is_successful() and not self.is_redownloaded:
             self.phantom_download()
+            self.is_redownloaded = True
             self.parse()
 
 

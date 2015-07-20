@@ -48,6 +48,8 @@ os.system("cp -r ./newspaper/resources " + get_python_lib() + "/newspaper-0.0.9.
 
 os.system("cp -r ./newspaper/videos " + get_python_lib()  + "/newspaper-0.0.9.8-py2.7.egg/newspaper/")
 
+os.system("cp ./download.js /usr/local/bin/")
+
 
 
 

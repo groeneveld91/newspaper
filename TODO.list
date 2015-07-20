@@ -1,0 +1,17 @@
+### Date parsings ###
+<time class="timestamp">
+  August 20, 2011
+</time>
+###############################################################################################################
+
+### Text parsings ###
+<p class="content__dateline"/> -- for http://www.bizjournals.com/sanfrancisco/blog/2014/04/slack-42-million-funding-round-stewart-butterfield.html
+
+
+article.text = u'' for http://www.theguardian.com/sport/blog/2015/jul/14/australia-cricket-dont-cry-for-shane-watson
+
+
+
+
+
+look for iframes with src=youtube as in http://digg.com/video/steve-jobs-movie-michael-fassbender-seth-rogen
